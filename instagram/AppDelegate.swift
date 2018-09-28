@@ -8,15 +8,51 @@
 
 import UIKit
 import Parse
+import NotificationCenter
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
 
     var window: UIWindow?
+    
+
 
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplicationLaunchOptionsKey: Any]?) -> Bool {
         // Override point for customization after application launch.
+        
+        // Initialize Parse
+        // Set applicationId and server based on the values in the Heroku settings.
+        // clientKey is not used on Parse open source unless explicitly configured
+        Parse.initialize(
+            with: ParseClientConfiguration(block: { (configuration: ParseMutableClientConfiguration) -> Void in
+                configuration.applicationId = "instagram"
+                configuration.clientKey = "masterkeysareveryimportant"  // set to nil assuming you have not set clientKey
+                configuration.server = "https://frozen-sands-49778.herokuapp.com/parse"
+            })
+        )
+        // check if user is logged in.
+        if PFUser.current() != nil {
+            let storyboard = UIStoryboard(name: "Main", bundle: nil)
+            // view controller currently being set in Storyboard as default will be overridden
+            window?.rootViewController = storyboard.instantiateViewController(withIdentifier: "AuthenticatedViewController")
+        }
+        
+        NotificationCenter.default.addObserver(forName: Notification.Name("didLogout"), object: nil, queue: OperationQueue.main) { (Notification) in
+            print("Logout notification received")
+            // Logout the current user
+            PFUser.logOutInBackground(block: { (error) in
+                if let error = error {
+                    print(error.localizedDescription)
+                } else {
+                    print("Successful loggout")
+                    // Load and show the login view controller
+                    let storyboard = UIStoryboard(name: "Main", bundle: nil)
+                    let loginViewController = storyboard.instantiateViewController(withIdentifier: "LoginViewController")
+                    self.window?.rootViewController = loginViewController
+                }
+            })
+        }
         return true
     }
 
